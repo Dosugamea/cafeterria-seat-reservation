@@ -1,6 +1,19 @@
 extends layout
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
+  div.card.mt-3
+    div.card-header.bg-danger
+      h2.text-white= error.status+" "+message
+    div.card-body
+      case error.status
+        when 404
+          p そのページは見つかりませんでした
+        when 401
+          p 認証に失敗しました
+        default
+          p サーバでエラーが発生しました
+          pre #{error.stack}
+      p: お問い合わせの際は下記リンクよりよろしくお願いいたします。
+      p: ホームより引き続きサービスをご利用いただけます。
+      a.btn.btn-success.btn-outline(href="/contact") お問い合わせ
+      a.ml-2.btn.btn-success.btn-outline(href="/") ホーム
