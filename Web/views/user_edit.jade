@@ -1,0 +1,46 @@
+extends layout
+
+block content
+  if err_type !== undefined
+    div.row.mt-3
+      div.alert.alert-danger.w-100.alert-block.devise-bs.mx-2
+        button(type="button" class="close" data-dismiss="alert") ×
+        h5 エラーが発生したため更新できませんでした
+        case err_type
+          when 1
+            ul: li 現在のパスワードを入力してください
+          when 2
+            ul: li 新しいパスワードを入力してください
+          when 3
+            ul: li 新しいパスワードが一致しません
+  div.row.mt-3
+    div.col
+      div.card
+        div.card-header.bg-primary.text-white ユーザ編集
+        div.card-body
+          form(id="edit_user",action="/user",method="post")
+            div.form-group
+              label(for="new-passwd") パスワード
+              input(id="new-passwd" type="password").form-control
+            div.form-group
+              label(for="new-passwd-re") パスワード(確認)
+              input(id="new-passwd-re" type="password").form-control
+            div.form-group
+              label(for="old-passwd") 現在のパスワード
+              input(id="old-passwd" type="password").form-control
+            input(type="submit",name="commit",value="更新する").btn.btn-primary.w-100.mt-4
+  div.modal.fade(id="removeAccount",tabindex="-1",role="dialog",aria-hidden="true",aria-labelledby="removeAccountLabel")
+    div.modal-dialog.modal-dialog-centered(role="document")
+      div.modal-content
+        div.modal-header
+          h5.modal-title(id="removeAccountLabel") 警告
+          button(type="button",class="close",data-dismiss="modal",aria-label="閉じる")
+            span(aria-hidden="true") &times;
+        div.modal-body
+          p 削除後1か月は再登録できません。本当に削除しますか？
+        div.modal-footer
+          button(type="button",data-dismiss="modal").btn.btn-secondary.w-75 閉じる
+          a(rel="nofollow",data-method="delete",href="/user").btn.btn-primary 削除
+  div.row
+    button(type="button",data-toggle="modal",data-target="#removeAccount").bg-danger.mt-5.mx-auto.btn.btn-primary アカウント削除
+  div(class="mt-2")
