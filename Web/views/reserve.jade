@@ -7,3 +7,21 @@ block content
         div.card-body
           h4 予約画面
           p LA TERRAの席の予約を行えます
+          form(method="post").mt-5
+            div.form-group
+              label(for="seatType") 席の種別
+              select.form-control(id="seatType")
+                option 時間無制限
+                option 20分席
+                option 15分席
+            div.form-group
+              label(for="seatType") 日付
+              select.form-control(id="seatType")
+                option 今日
+            div.form-group
+              label(for="seatType") 時間帯
+              select.form-control(id="seatType")
+                option 11:00
+                option 12:00
+                option 13:00
+            input(type="submit",name="送信する",value="送信する").btn.btn-primary.w-100
