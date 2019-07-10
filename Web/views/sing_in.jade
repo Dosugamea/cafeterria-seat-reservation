@@ -1,0 +1,25 @@
+extends layout
+
+block content
+  if err_type !== undefined
+    div.row.mt-3
+      div.alert.alert-danger.w-100.alert-block.devise-bs.mx-2
+        button(type="button" class="close" data-dismiss="alert") ×
+        h5 エラーが発生したためログインできませんでした
+        ul: li メールアドレスまたはパスワードが正しくありません
+  div.row.mt-3
+    div.col
+      div.card
+        div.card-header.bg-primary.text-white ログイン
+        div.card-body
+          form(id="create_user",action="/user",method="post")
+            div.form-group
+              label(for="account-mail") メールアドレス
+              input(id="account-mail" type="text").form-control
+            div.form-group
+              label(for="account-passwd") パスワード
+              input(id="account-passwd-re" type="password").form-control
+            input(type="submit",name="commit",value="ログイン").btn.btn-primary.w-100.mt-4
+  div.row
+    button(type="button",data-toggle="modal",data-target="#removeAccount").bg-danger.mt-5.mx-auto.btn.btn-primary 新規会員登録
+  div(class="mt-2")

@@ -11,17 +11,20 @@ block content
             div.form-group
               label(for="seatType") 席の種別
               select.form-control(id="seatType")
+                option(value,selected,disabled) 席の種別を選択してください
                 option 時間無制限
                 option 20分席
                 option 15分席
             div.form-group
               label(for="seatType") 日付
               select.form-control(id="seatType")
+                option(value,selected,disabled) 日付を選択してください
                 option 今日
             div.form-group
               label(for="seatType") 時間帯
               select.form-control(id="seatType")
-                option 11:00
-                option 12:00
-                option 13:00
+                option(value,selected,disabled) 時間帯を選択してください
+                option 11:00~12:00
+                option 12:00~13:00
+                option 13:00~14:00
             input(type="submit",name="送信する",value="送信する").btn.btn-primary.w-100
