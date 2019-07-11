@@ -2,8 +2,15 @@ header
   nav(class="navbar navbar-light bg-light")
     div(class="container")
       a(class="navbar-brand" href="/") LAKITO
-      div(class="ml-auto")
-        a(class="btn btn-md" href="/announcements")
-          i(class="fas fa-bell")
-      a(href="/user" class="ml-2 btn btn-md btn-primary")
-        i(class="fas fa-user") マイページ
+      if (!user)
+        div(class="ml-auto")
+          a(href="/sign_up" class="ml-2 btn btn-md btn-outline-primary")
+            | 新規会員登録
+          a(href="/sign_in" class="ml-2 btn btn-md btn-primary")
+            | ログイン 
+      if (user)
+        div(class="ml-auto")
+          a(class="btn btn-md" href="/announcements")
+            i(class="fas fa-bell")
+        a(href="/user" class="ml-2 btn btn-md btn-primary")
+          i(class="fas fa-user") マイページ

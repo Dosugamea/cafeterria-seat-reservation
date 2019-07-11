@@ -12,14 +12,14 @@ block content
       div.card
         div.card-header.bg-primary.text-white ログイン
         div.card-body
-          form(id="create_user",action="/user",method="post")
+          form(role='form',id="login_user",action="/sign_in",method="post")
             div.form-group
               label(for="account-mail") メールアドレス
-              input(id="account-mail" type="text").form-control
+              input(id="account-mail" name="account-mail" type="text").form-control
             div.form-group
               label(for="account-passwd") パスワード
-              input(id="account-passwd-re" type="password").form-control
-            input(type="submit",name="commit",value="ログイン").btn.btn-primary.w-100.mt-4
+              input(id="account-passwd" name="account-passwd" type="password").form-control
+            button.btn.btn-success.w-100.mt-4(type="submit") ログイン
   div.row
-    button(type="button",data-toggle="modal",data-target="#removeAccount").bg-danger.mt-5.mx-auto.btn.btn-primary 新規会員登録
+    a(href="sign_up").mt-5.mx-auto.btn.btn-info 新規会員登録へ
   div(class="mt-2")

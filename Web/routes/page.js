@@ -32,6 +32,15 @@ router.get('/term_of_service', function(req, res, next) {
 router.get('/privacy_policy', function(req, res, next) {
   res.render('privacy_policy');
 });
+// ログイン
+router.get('/sign_in', function(req, res, next) {
+  res.render('sign_in');
+});
+
+// 登録
+router.get('/sign_up', function(req, res, next) {
+  res.render('sign_up');
+});
 
 /*
  ログイン必須ページ
