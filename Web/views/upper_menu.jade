@@ -1,14 +1,15 @@
+block variables
 header
   nav(class="navbar navbar-light bg-light")
     div(class="container")
       a(class="navbar-brand" href="/") LAKITO
-      if (!user)
+      if (!isLogined)
         div(class="ml-auto")
           a(href="/sign_up" class="ml-2 btn btn-md btn-outline-primary")
             | 新規会員登録
           a(href="/sign_in" class="ml-2 btn btn-md btn-primary")
             | ログイン 
-      if (user)
+      if (isLogined)
         div(class="ml-auto")
           a(class="btn btn-md" href="/announcements")
             i(class="fas fa-bell")

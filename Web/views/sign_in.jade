@@ -12,13 +12,13 @@ block content
       div.card
         div.card-header.bg-primary.text-white ログイン
         div.card-body
-          form(role='form',id="login_user",action="/sign_in",method="post")
+          form(role='form',id="login_user",action="/api/login",method="post")
             div.form-group
-              label(for="account-mail") メールアドレス
-              input(id="account-mail" name="account-mail" type="text").form-control
+              label(for="account_mail") メールアドレス
+              input(id="account_mail" name="account_mail" type="text").form-control
             div.form-group
-              label(for="account-passwd") パスワード
-              input(id="account-passwd" name="account-passwd" type="password").form-control
+              label(for="account_passwd") パスワード
+              input(id="account_passwd" name="account_passwd" type="password").form-control
             button.btn.btn-success.w-100.mt-4(type="submit") ログイン
   div.row
     a(href="sign_up").mt-5.mx-auto.btn.btn-info 新規会員登録へ

@@ -1,5 +1,7 @@
 var express = require('express');
 var router = express.Router();
+var createError = require('http-errors');
+const pages = ['contact', 'help', 'index', 'privacy_policy', 'sign_in', 'sign_up', 'term_of_service'];
 
 /*
  ログイン不要ページ
@@ -7,39 +9,21 @@ var router = express.Router();
 
 // トップページ
 router.get('/', function(req, res, next) {
-  res.render('index');
+　　console.log(req.body.isLogined);
+  res.render('index', {isLogined: req.isLogined});
 });
 router.get('/index.html', function(req, res, next) {
   res.redirect('/');
 });
-// アナウンス
-router.get('/announcements', function(req, res, next) {
-  res.render('announcements');
-});
-// 連絡先
-router.get('/contact', function(req, res, next) {
-  res.render('contact');
-});
-// ヘルプ
-router.get('/help', function(req, res, next) {
-  res.render('help');
-});
-// 利用規約
-router.get('/term_of_service', function(req, res, next) {
-  res.render('term_of_service');
-});
-// プライバシーポリシー
-router.get('/privacy_policy', function(req, res, next) {
-  res.render('privacy_policy');
-});
-// ログイン
-router.get('/sign_in', function(req, res, next) {
-  res.render('sign_in');
-});
-
-// 登録
-router.get('/sign_up', function(req, res, next) {
-  res.render('sign_up');
+// 通常ページ
+router.get('/:name', function(req, res, next) {
+	if (pages.indexOf(req.params.name) >= 0) {
+        res.render(req.params.name, {isLogined: req.isLogined});
+    }else{
+	  var err = new Error('Not Found');
+	  err.status = 404;
+	  next(createError(404));
+	}
 });
 
 /*
