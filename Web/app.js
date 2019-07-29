@@ -10,6 +10,15 @@ var pageRouter = require('./routes/page');
 var apiRouter = require('./routes/api');
 var app = express();
 
+// データベースのセットアップ
+var mysql = require('mysql2');
+var connection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'lakito'
+});
+
 // Expressのセットアップ(順番変えると動かなくなるかも...)
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -25,21 +34,24 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // 認証方法
-passport.use(new LocalStrategy({
-  usernameField: 'account_mail',
-  passwordField: 'account_passwd',
-  passReqToCallback: true,
-  session: false,
-}, function (req, username, password, done) {
-  process.nextTick(function () {
-    if (username === "test" && password === "test") {
-      return done(null, true)
-    } else {
-      console.log("login error")
-      return done(null, false, { message: 'パスワードが正しくありません。' })
-    }
-  })
-}));
+passport.use(new LocalStrategy(
+	{
+	  usernameField: 'account_mail',
+	  passwordField: 'account_passwd'
+	},
+	function (username, password, done) {
+		connection.query("SELECT * from `users` WHERE `mail` = ? AND `passwd` = ?;",[username,password], function(err, datas) {
+			// 結果に含まれていたらログイン成功
+			for (i = 0; i < datas.length; i++) {
+				if (datas[i].mail == username || datas[i].passwd == password){
+					return done(null, username);
+				}
+			}
+			// 含まれていなければログイン失敗
+			return done(null, false, {message: "ログインに失敗しました"});
+		});
+	}
+));
 
 // 認証 シリアライズ/デシリアライズ
 passport.serializeUser(function (user, done) {

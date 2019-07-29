@@ -1,8 +1,5 @@
 extends layout
 
-block variables
-    - var isLogined = isLogined
-
 block content
   div(class="jumbotron mt-3 bg-header")
     div(class="container")
@@ -10,7 +7,10 @@ block content
       p(class="lead text-center") 予約で学食をより素早く、よりスムーズに
       div(class="text-center")
         hr(class="btn-warning")
-        a(href="/user" class="btn btn-primary") マイページ
+        if (!login_ok)
+          a(href="/sign_in" class="btn btn-primary") ログイン
+        if (login_ok)
+          a(href="/user" class="btn btn-primary") マイページ
   div(class="row")
     div(class="container")
       h2 LAKITOのできること

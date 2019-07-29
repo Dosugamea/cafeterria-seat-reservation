@@ -3,13 +3,20 @@ var router = express.Router();
 var passport = require('passport');
 
 
-// API: ログイン
+// アカウント登録
+router.post('/sign_up', function(req,res){
+	console.log(req.body.account_mail);
+	console.log(req.body.account_passwd);
+	res.redirect('/sign_in');
+});
+
+// ログイン
 router.post('/login', passport.authenticate('local', 
     {successRedirect: '/',
     failureRedirect: '/sign_in',
     session: true}));
 
-// API: ログアウト
+// ログアウト
 router.get('/logout', function(req, res) {
     req.logout();
     res.redirect('/');
