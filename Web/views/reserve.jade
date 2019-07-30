@@ -7,7 +7,7 @@ block content
         div.card-body
           h4 予約画面
           p LA TERRAの席の予約を行えます
-          form(method="post").mt-5
+          form(method="post",action="/reserve").mt-5
             div.form-group
               label(for="seatType") 席の種別
               select.form-control(id="seatType")

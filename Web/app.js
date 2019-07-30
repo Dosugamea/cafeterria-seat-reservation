@@ -29,7 +29,14 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // パスポートを申請する
-app.use(session({ resave:true,saveUninitialized:true, secret: 'cafe_key' }));
+app.use(session({
+	resave:true,
+	saveUninitialized:true,
+	secret:'cafe_key',
+	cookie: {
+		maxAge: 1000 * 60 * 60 * 24 * 31
+	}
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -63,7 +70,7 @@ passport.deserializeUser(function (user, done) {
 
 // ページルータに流す
 app.use('/', pageRouter);
-app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // 404エラーを捕まえる
 app.use(function(req, res, next) {
