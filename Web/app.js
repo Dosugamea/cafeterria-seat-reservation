@@ -51,7 +51,7 @@ passport.use(new LocalStrategy(
 			// 結果に含まれていたらログイン成功
 			for (i = 0; i < datas.length; i++) {
 				if (datas[i].mail == username || datas[i].passwd == password){
-					return done(null, username);
+					return done(null, datas[i].userId);
 				}
 			}
 			// 含まれていなければログイン失敗
