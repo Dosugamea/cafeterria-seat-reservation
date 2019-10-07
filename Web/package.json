@@ -15,7 +15,8 @@
     "mysql2": "^1.6.5",
     "passport": "^0.4.0",
     "passport-local": "^1.0.0",
-    "qrcode": "^1.4.2"
+    "qrcode": "^1.4.2",
+    "socket.io": "^2.3.0"
   },
   "devDependencies": {
     "clean-css": "^4.2.1",

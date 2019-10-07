@@ -39,7 +39,27 @@ router.get('/index.html', function(req, res, next) {
 // ユーザーページ
 router.get('/user', function(req, res, next) {
 	if(req.user){
-		res.render('user', {login_ok: req.user});
+		//予約情報取得
+		connection.query("SELECT TIME_FORMAT(fromTime, '%H:%i') AS fTime ,TIME_FORMAT(toTime, '%H:%i') AS tTime FROM reserves WHERE userId=? AND status=0 ORDER BY reserveId DESC LIMIT 1",　[req.user], function(err,data) {
+			var reserve_date = "予約は";
+			var reserve_time = "入っていません";
+			//予約されていれば予約日枠を用意
+			if (data.length > 0){
+				//予約規制情報を取得する
+				//予約規制されてなければ普通にデータを
+				var today = new Date();
+				reserve_date = (today.getMonth()+1)+"/"+today.getDate();
+				reserve_time = data[0].fTime+"-"+data[0].tTime;
+			}
+			connection.query("SELECT COUNT(reserveId) AS orderCount FROM reserves WHERE userId=?",　[req.user], function(err,data) {
+				res.render('user', {
+					login_ok: req.user,
+					reservedDate: reserve_date,
+					reservedTime: reserve_time,
+					orderCount: data[0].orderCount
+				});
+			});
+		});
 	}else{
 		res.redirect('/sign_in');
 	}
@@ -64,7 +84,7 @@ router.get('/user/reserve', function(req, res, next) {
 router.get('/user/reserve/code', function(req, res, next) {
 	if(req.user){
 		//予約情報取得
-		connection.query("SELECT reserveId from reserves WHERE userId=? AND status=0",　[req.user], function(err,data) {
+		connection.query("SELECT * from reserves WHERE userId=? AND status=0",　[req.user], function(err,data) {
 			//予約されていればQRコードを生成
 			if (data.length > 0){
 				QRCode.toDataURL(req.user+'_'+data[0].reserveId, function (err, url) {
@@ -103,9 +123,7 @@ router.get('/user/reserve/status', function(req, res, next) {
 });
 
 /*
-
 一般ページ
-
 */
 router.get('/:name', function(req, res, next) {
 	if (pages.indexOf(req.params.name) >= 0) {

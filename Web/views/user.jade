@@ -9,8 +9,8 @@ block content
             i(class="fas fa-clock fa-5x")
           div(class="p-2")
             div(class="d-flex flex-column text-right")
-              h2 12/04 
-              h3 12:50-13:10
+              h2= reservedDate
+              h3= reservedTime
               | 予約日
     div(class="col-md-6 my-2")
       div(class="card h-100")
@@ -19,7 +19,7 @@ block content
             i(class="fas fa-drumstick-bite fa-5x")
           div(class="p-2")
             div(class="d-flex flex-column text-right")
-              h1 0回
+              h1= orderCount
               | 注文回数
   div(class="row")
     div(class="col-md-6 my-2")
@@ -29,7 +29,7 @@ block content
           div(class="list-group")
             a(class="list-group-item" href="/user/reserve") 予約する
             a(class="list-group-item" href="/user/reserve/code") 予約コード表示
-            a(class="list-group-item" href="/user/reserve/status") 予約状態
+            // a(class="list-group-item" href="/user/reserve/status") 予約状態
     div(class="col-md-6 my-2")
       div(class="card h-100")
         div(class="card-header") プロフィール関連

@@ -20,14 +20,14 @@ block content
         div.card-body
           form(id="edit_user",action="/user",method="post")
             div.form-group
-              label(for="new-passwd") パスワード
-              input(id="new-passwd" type="password").form-control
+              label(for="old_passwd") 現在のパスワード
+              input(id="old_passwd" name="old_passwd" type="password").form-control
             div.form-group
-              label(for="new-passwd-re") パスワード(確認)
-              input(id="new-passwd-re" type="password").form-control
+              label(for="new_passwd") 新しいパスワード
+              input(id="new_passwd" name="new_passwd" type="password").form-control
             div.form-group
-              label(for="old-passwd") 現在のパスワード
-              input(id="old-passwd" type="password").form-control
+              label(for="new_passwd_re") 新しいパスワード(確認)
+              input(id="new_passwd_re" name="new_passwd_re" type="password").form-control
             input(type="submit",name="commit",value="更新する").btn.btn-primary.w-100.mt-4
   div.modal.fade(id="removeAccount",tabindex="-1",role="dialog",aria-hidden="true",aria-labelledby="removeAccountLabel")
     div.modal-dialog.modal-dialog-centered(role="document")
