@@ -23,51 +23,42 @@ router.post('/user/wait_qr', function(req,res){
 router.post('/admin/verify_reserve', function(req,res){
 	var userId = req.body.userId;
 	var reserveId = req.body.reserveId;
-	// 何分ずれてるか
-	var minuteDistance = function (src, dst) {
-		var deltaMillsecond = dst.getTime() - src.getTime();
-		return deltaMillsecond / 1000 / 60;
-	}
 	console.log(userId);
 	console.log(reserveId);
 	// 予約データ取得
-	connection.query("SELECT status,DATE_FORMAT(fromTime, '%H:%i') AS fTime ,TIME_FORMAT(toTime, '%H:%i') AS tTime FROM reserves WHERE userId=? AND reserveId=?",[userId,reserveId], function(err,data){
+	connection.query("SELECT status,DATE_FORMAT(fromTime, '%Y-%m-%dT%TZ') AS fTime ,TIME_FORMAT(toTime, '%Y-%m-%dT%TZ') AS tTime FROM reserves WHERE userId=? AND reserveId=?",[userId,reserveId], function(err,data){
 		// 取得できたら
 		if (data.length > 0){
 			//今の時間
 			var nowTime = new Date();
+			var fTime = new Date(data[0].fTime);
+			var diffTime = Math.abs(nowTime-fTime);
+			var diffMins = Math.round(((diffTime % 86400000) % 3600000) / 60000);
+			console.log(diffMins);
+			var status_value = "";
+			var reason_value = "";
 			//時間を過ぎている
-			if (fTime > nowTime+3){
-				res.json({
-					status:"ng",
-					reason:"the reserve is time out."
-				});
+			if (diffMins < -3){
+				status_value = "ng";
+				reason_value = "the reserve is time out.";
 			//まだ時間じゃない
-			}else if (fTime < nowTime-5){
-				res.json({
-					status:"ng",
-					reason:"the reserve is not in time."
-				});
+			}else if (diffMins > 5){
+				status_value = "ng";
+				reason_value = "the reserve is not in time.";
 			// 状態問題なし
 			}else if (data[0].status == 0){
-				connection.query("UPDATE `reserves` SET `status`=1 WHERE `userId`=? AND `reserveId`=?;",[userId,reserveId], function(err, data) {
-					res.json({
-							status:"ok",
-							reason: "no problem"
-					});
-				});
+				status_value = "ok";
+				reason_value = "no problem";
+				connection.query("UPDATE `reserves` SET `status`=1 WHERE `userId`=? AND `reserveId`=?;",[userId,reserveId], function(err, data) {});
 			//予約が使用済みならエラー
 			}else if (data[0].status == 1){
-				res.json({
-					status:"ng",
-					reason:"the reserve is already used"
-				});
+				status_value = "ng";
+				reason_value = "the reserve is already used";
 			//管理者による強制無効化
 			}else if (data[0].status == -1){
-				res.json({
-					status:"ng",
-					reason:"the reserve is disabled by admin"
-				});
+				status_value = "ng";
+				reason_value = "the reserve is disabled by admin";
+			}
 			//DBを更新する
 			connection.query("UPDATE `reserves` SET `qr_response`=? WHERE `reserveId`=?;",[reason,reserveId], function(err, data) {
 				res.json({
