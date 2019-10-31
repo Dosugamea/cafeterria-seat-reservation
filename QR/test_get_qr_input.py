@@ -14,6 +14,8 @@ def on_press(key):
     # 最後はenter入力になる
     else:
         print(qr_data)
+        qr_data = ""
+        
 
 
 if __name__ == '__main__':
