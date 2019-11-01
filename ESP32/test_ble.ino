@@ -63,8 +63,44 @@ class iBeacon{
     }
 };
 
+
+// バイナリ文字列を10進数に変換する
+int StrToInt(String dataHex){
+  int len = dataHex.length();
+  char buf[30];
+  dataHex.toCharArray(buf, len+1);
+  return (int) strtol(buf, 0, 16);
+}
+
+int getSeatId(String uuid){
+  int seatId;
+  seatId = StrToInt(uuid.substring(0, 8));
+  return seatId;
+}
+
+unsigned long getSequenceId(String uuid){
+  unsigned long seqId;
+  int upperData = StrToInt(uuid.substring(8, 4));
+  int lowerData = StrToInt(uuid.substring(12, 4));
+  seqId = upperData*1000 + lowerData;
+  return seqId;
+}
+
+int getTimeSeconds(String uuid){
+  int timeSeconds;
+  timeSeconds = StrToInt(uuid.substring(16, 4));
+  return timeSeconds;
+}
+
+unsigned long verifyData(String uuid){
+  unsigned long verifyData;
+  verifyData = StrToInt(uuid.substring(20, 12));
+  return verifyData;
+}
+
 int scanTime = 2; //In seconds
 BLEScan* pBLEScan;
+int sequenceId = -1;
  
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     // アドバタイジングデータを受け取ったとき
@@ -73,7 +109,12 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       if (bacon.isBeacon()){
         char uuid[37];
         bacon.getUUID().toCharArray(uuid, 37);
-        Serial.printf("UUID: %s, Major: %d, Minor: %d, RSSI: %d \n", uuid, bacon.getMajor(), bacon.getMinor(), bacon.getRSSI());
+        String uuidStr = bacon.getUUID();
+        if (uuidStr.startsWith("1204")){
+          Serial.printf("UUID: %s, Major: %d, Minor: %d, RSSI: %d \n", uuid, bacon.getMajor(), bacon.getMinor(), bacon.getRSSI());
+          sequenceId = getSequenceId(uuidStr);
+          Serial.printf("SeqId: %d", sequenceId);
+        }
       }
     }
 };
