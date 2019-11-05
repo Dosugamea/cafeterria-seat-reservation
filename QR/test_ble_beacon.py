@@ -12,7 +12,7 @@ def generateDataUUID(seatId, sequenceId, timeMinutes):
     seatStr = str(hex(seatId)).replace("0x","").zfill(4)
     seqIdStr = str(hex(sequenceId)).replace("0x","").zfill(8)
     timeStr = str(hex(timeMinutes * 60)).replace("0x","").zfill(4)
-    verifyStr = str((seatId+sequenceId+timeMinutes)*100).zfill(12)
+    verifyStr = str(hex((seatId+sequenceId+timeMinutes)*100)).zfill(12)
     return f"1204{seatStr}-{seqIdStr[:4]}-{seqIdStr[4:]}-{timeStr}-{verifyStr}" 
  
 seatId = 1

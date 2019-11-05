@@ -12,9 +12,16 @@
  * http://www.musashinodenpa.com/arduino/ref/index.php?f=0&pos=1462
  * https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/
  * http://marchan.e5.valueserver.jp/cabin/comp/jbox/arc212/doc21202.html
+ * 
+ * UUIDは 8桁-4桁-4桁-4桁-12桁
+ * 1204(seatId)-seqId(上4)-seqId(下4)-time(4)-検証用のデータ合計*100
+ * それぞれのデータはHex(16進)
+ * 
  */
 
-// iBeaconを扱うクラス
+/* 
+ *  iBeaconを扱うクラス
+ */
 class iBeacon{
   private:
     String uuid;
@@ -63,8 +70,9 @@ class iBeacon{
     }
 };
 
-
-// バイナリ文字列を10進数に変換する
+/*
+ * UUIDからデータを取り出す関数
+ */
 int StrToInt(String dataHex){
   int len = dataHex.length();
   char buf[30];
@@ -72,48 +80,80 @@ int StrToInt(String dataHex){
   return (int) strtol(buf, 0, 16);
 }
 
+unsigned long StrToLong(String dataHex){
+  int len = dataHex.length();
+  char buf[30];
+  dataHex.toCharArray(buf, len+1);
+  return (unsigned long) strtol(buf, 0, 16);
+}
+
 int getSeatId(String uuid){
-  int seatId;
-  seatId = StrToInt(uuid.substring(0, 8));
+  String seatData = uuid.substring(4,8);
+  int seatId = StrToInt(seatData);
   return seatId;
 }
 
 unsigned long getSequenceId(String uuid){
-  unsigned long seqId;
-  int upperData = StrToInt(uuid.substring(8, 4));
-  int lowerData = StrToInt(uuid.substring(12, 4));
-  seqId = upperData*1000 + lowerData;
+  String upperData = uuid.substring(9,13);
+  String lowerData = uuid.substring(14,18);
+  String seqData = upperData + lowerData;
+  unsigned long seqId = StrToLong(seqData);
   return seqId;
 }
 
 int getTimeSeconds(String uuid){
-  int timeSeconds;
-  timeSeconds = StrToInt(uuid.substring(16, 4));
+  String timeData = uuid.substring(19,23);
+  int timeSeconds = StrToInt(timeData);
   return timeSeconds;
 }
 
-unsigned long verifyData(String uuid){
-  unsigned long verifyData;
-  verifyData = StrToInt(uuid.substring(20, 12));
-  return verifyData;
+unsigned long getVerifyData(String uuid){
+  String verifyData = uuid.substring(24,36);
+  unsigned long verifyLong = StrToLong(verifyData);
+  return verifyLong;
 }
 
-int scanTime = 2; //In seconds
+bool isCorrectData(int seatId, unsigned long seqId, int timeSeconds, unsigned long verifyData){
+  Serial.printf("SeatId: %d\n", seatId);
+  Serial.printf("SeqId: %d\n", seqId);
+  Serial.printf("TimeSeconds: %d\n", timeSeconds);
+  //Serial.printf("VerifyData: %d\n", verifyData);
+  unsigned long totalData = 100*(seatId+seqId+(timeSeconds/60));
+  if (totalData == verifyData){
+    return true;  
+  }else{
+    return false;  
+  }
+}
+
+
+/*
+ * グローバル変数
+ */
+
 BLEScan* pBLEScan;
+// スキャン時間: 2秒でほぼ確実に捕まる
+int scanTime = 2;
 int sequenceId = -1;
+int seatId = -1;
  
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     // アドバタイジングデータを受け取ったとき
     void onResult(BLEAdvertisedDevice advertisedDevice) {
       iBeacon bacon(advertisedDevice);
       if (bacon.isBeacon()){
-        char uuid[37];
-        bacon.getUUID().toCharArray(uuid, 37);
         String uuidStr = bacon.getUUID();
         if (uuidStr.startsWith("1204")){
-          Serial.printf("UUID: %s, Major: %d, Minor: %d, RSSI: %d \n", uuid, bacon.getMajor(), bacon.getMinor(), bacon.getRSSI());
-          sequenceId = getSequenceId(uuidStr);
-          Serial.printf("SeqId: %d", sequenceId);
+          Serial.printf("UUID: ??, Major: %d, Minor: %d, RSSI: %d \n", bacon.getMajor(), bacon.getMinor(), bacon.getRSSI());
+          int seatId = getSeatId(uuidStr);
+          unsigned long seqId = getSequenceId(uuidStr);
+          int timeSeconds = getTimeSeconds(uuidStr);
+          unsigned long verifyData = getVerifyData(uuidStr);
+          if (isCorrectData(seatId,seqId,timeSeconds,verifyData)){
+            Serial.printf("This bacon looks nice bacon!\n");  
+          }else{
+            Serial.printf("This bacon is over cooked!\n");
+          }
         }
       }
     }
