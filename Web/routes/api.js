@@ -25,8 +25,31 @@ let connection = mysql.createConnection({
 
 // 予約の受付
 router.post('/user/reserve', function(req,res){
-	let userId = req.body.userId;
-	let requestHour = req.body.requestHour;
+	let userId = req.user;
+	let seatType = req.body.seatType;
+	let seatTime = req.body.seatTime;
+	let dbCheckKey = "";
+	if(req.user){
+		console.log(userId);
+		console.log(seatType);
+		console.log(seatTime);
+		if (isNaN(seatTime)){
+			dbCheckKey = "accept"+parseInt(seatTime)+"Minutes";
+		}else{
+			res.redirect('/user/reserve');
+		}
+		connection.query("SELECT seatID FROM seats WHERE "+dbCheckKey+"=1 AND isEmpty=1", function(err,data){
+			if (err){
+				res.json({
+					status:"ng",
+					reason:"database error"
+				});
+			}
+		}
+		res.redirect('/user/reserve');
+	}else{
+		res.redirect('/sign_in');
+	}
 });
 
 // 予約のQR読み込み待ち(一定秒数毎に1回たたく)
@@ -61,6 +84,13 @@ router.post('/user/wait_qr', function(req,res){
 						status:"ok",
 						code: "2",
 						reason:"end using seat ok"
+					});
+					break;
+				case 3:
+					res.json({
+						status:"ng",
+						code: "3",
+						reason:"already used."
 					});
 					break;
 				default:
@@ -152,25 +182,29 @@ router.post('/sign_up', function(req,res){
 
 // アカウント編集
 router.post('/user', function(req,res){
-	ac_npass = req.body.new_passwd
-	ac_npass_re = req.body.new_passwd_re
-	ac_opass = req.body.old_passwd
-	console.log(ac_npass);
-	console.log(ac_npass_re);
-	console.log(ac_opass);
-	if (ac_npass != ac_npass_re){
-		res.redirect('/user/edit?error=1');
-		return;
-	}
-	connection.query("SELECT passwd FROM `users` WHERE passwd=? AND userId=?",[ac_opass,req.user], function(err, data) {
-		if(data.length > 0){
-			connection.query("UPDATE `users` SET `passwd`=? WHERE `userId`=?;",[ac_npass,req.user], function(err, data) {
-				res.redirect('/user?status=2');
-			});
-		}else{
-			res.redirect('/user/edit?error=2');
+	if(req.user){
+		ac_npass = req.body.new_passwd
+		ac_npass_re = req.body.new_passwd_re
+		ac_opass = req.body.old_passwd
+		console.log(ac_npass);
+		console.log(ac_npass_re);
+		console.log(ac_opass);
+		if (ac_npass != ac_npass_re){
+			res.redirect('/user/edit?error=1');
+			return;
 		}
-	});
+		connection.query("SELECT passwd FROM `users` WHERE passwd=? AND userId=?",[ac_opass,req.user], function(err, data) {
+			if(data.length > 0){
+				connection.query("UPDATE `users` SET `passwd`=? WHERE `userId`=?;",[ac_npass,req.user], function(err, data) {
+					res.redirect('/user?status=2');
+				});
+			}else{
+				res.redirect('/user/edit?error=2');
+			}
+		});
+	}else{
+		res.redirect('/sign_in');
+	}
 }); 
 
 // ログイン

@@ -7,24 +7,19 @@ block content
         .card-body
           h4 予約画面
           p LA TERRAの席の予約を行えます
-          form(method="post",action="/reserve").mt-5
+          form(method="post",action="/user/reserve").mt-5
             .form-group
               label(for="seatType") 席の種別
-              select.form-control(id="seatType")
-                option(value,selected,disabled) 席の種別を選択してください
-                option 時間無制限
-                option 20分席
-                option 15分席
-            .form-group
-              label(for="seatType") 日付
-              select.form-control(id="seatType")
-                option(value,selected,disabled) 日付を選択してください
-                option 今日
+              select.form-control(name="seatType")
+                option(value=0,selected,disabled) 席の種別を選択してください
+                option(value=30) 30分席
+                option(value=20) 20分席
+                option(value=15) 15分席
             .form-group
               label(for="seatType") 時間帯
-              select.form-control(id="seatType")
-                option(value,selected,disabled) 時間帯を選択してください
-                option 11:00~12:00
-                option 12:00~13:00
-                option 13:00~14:00
+              select.form-control(name="seatTime")
+                option(value=0,selected,disabled) 時間帯を選択してください
+                option(value=11) 11:00~12:00
+                option(value=12) 12:00~13:00
+                option(value=13) 13:00~14:00
             input(type="submit",name="送信する",value="送信する").btn.btn-primary.w-100
