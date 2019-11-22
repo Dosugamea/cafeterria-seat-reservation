@@ -10,14 +10,14 @@ block content
           form(method="post",action="/user/reserve").mt-5
             .form-group
               label(for="seatType") 席の種別
-              select.form-control(name="seatType")
+              select.form-control(name="seatMinute")
                 option(value=0,selected,disabled) 席の種別を選択してください
                 option(value=30) 30分席
                 option(value=20) 20分席
                 option(value=15) 15分席
             .form-group
               label(for="seatType") 時間帯
-              select.form-control(name="seatTime")
+              select.form-control(name="seatHour")
                 option(value=0,selected,disabled) 時間帯を選択してください
                 option(value=11) 11:00~12:00
                 option(value=12) 12:00~13:00

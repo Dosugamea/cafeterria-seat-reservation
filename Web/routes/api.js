@@ -8,6 +8,7 @@ let connection = mysql.createConnection({
   password: '',
   database: 'lakito'
 });
+require('date-utils');
 
 /*
 1 使用時間を決めて予約をとる(直前でも可)(席取りはさせない)
@@ -25,28 +26,22 @@ let connection = mysql.createConnection({
 
 // 予約の受付
 router.post('/user/reserve', function(req,res){
-	let userId = req.user;
-	let seatType = req.body.seatType;
-	let seatTime = req.body.seatTime;
-	let dbCheckKey = "";
 	if(req.user){
-		console.log(userId);
-		console.log(seatType);
-		console.log(seatTime);
-		if (isNaN(seatTime)){
-			dbCheckKey = "accept"+parseInt(seatTime)+"Minutes";
-		}else{
-			res.redirect('/user/reserve');
-		}
-		connection.query("SELECT seatID FROM seats WHERE "+dbCheckKey+"=1 AND isEmpty=1", function(err,data){
-			if (err){
-				res.json({
-					status:"ng",
-					reason:"database error"
-				});
+		let userId = req.user;
+		let seatHour = req.body.seatHour;
+		let seatMinute = req.body.seatMinute;
+		connection.query("INSERT INTO reserves (userId, seatId, reserveHour, reserveMinute) VALUES (?,-1,?,?)",
+			[userId, seatHour, seatMinute],
+			function(err,data){
+				if (err){
+					res.json({
+						status:"ng",
+						reason:"database error"
+					});
+				}
+				res.redirect('/user/reserve/code');
 			}
-		}
-		res.redirect('/user/reserve');
+		);
 	}else{
 		res.redirect('/sign_in');
 	}
