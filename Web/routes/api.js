@@ -30,8 +30,8 @@ router.post('/user/reserve', function(req,res){
 		let userId = req.user;
 		let seatHour = req.body.seatHour;
 		let seatMinute = req.body.seatMinute;
-		connection.query("INSERT INTO reserves (userId, seatId, reserveHour, reserveMinute) VALUES (?,-1,?,?)",
-			[userId, seatHour, seatMinute],
+		connection.query("SELECT * FROM reserves WHERE userId=? AND qrStatus=0",
+			[userId],
 			function(err,data){
 				if (err){
 					res.json({
@@ -39,7 +39,24 @@ router.post('/user/reserve', function(req,res){
 						reason:"database error"
 					});
 				}
-				res.redirect('/user/reserve/code');
+				if (data.length > 0){
+					res.json({
+						status:"ng",
+						reason:"already exists"
+					});
+				}
+				connection.query("INSERT INTO reserves (userId, seatId, reserveHour, reserveMinute) VALUES (?,-1,?,?)",
+					[userId, seatHour, seatMinute],
+					function(err,data){
+						if (err){
+							res.json({
+								status:"ng",
+								reason:"database error"
+							});
+						}
+						res.redirect('/user/reserve/code');
+					}
+				);
 			}
 		);
 	}else{
