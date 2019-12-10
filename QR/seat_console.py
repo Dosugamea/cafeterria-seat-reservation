@@ -25,7 +25,7 @@ class SeatConsole():
         
     def handler(self):
         """ メイン処理 """
-        userId,reserveId = self.qrCode.split("-")
+        userId,reserveId = self.qrCode.split("_")
         resp = self.verifyCode(userId, reserveId)
         if resp:
             self.sendBLE(

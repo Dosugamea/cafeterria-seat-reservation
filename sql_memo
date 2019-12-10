@@ -1,0 +1,23 @@
+
+# 利用時間を過ぎている席は空席にする
+UPDATE seats SET reserveStat = '0' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=1;
+
+# 利用時間を過ぎていて次の人が居る場合は開始時刻を弄る
+UPDATE seats SET reserveStat = '1' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=2;
+
+
+# 空いてる席がまずあるならそれを取得
+SELECT seatID FROM seats WHERE reserveStat=0 AND accept30Minutes=1 ORDER BY RAND() LIMIT 1
+
+# 空いている席がないなら次に座れる席を取得
+SELECT seatID, (reservedMinute*60 -
+    (
+      ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60
+      + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))
+    )
+  ) as diffSeconds
+  FROM (SELECT seatID, reservedMinute, startedAt FROM seats WHERE accept30Minutes=1 AND reserveStat=1) AS acceptableSeats
+ORDER BY diffSeconds DESC LIMIT 1
+
+# 指定された席の状態を 更新する
+UPDATE seats SET reserveStat = '2' WHERE seatID=?;

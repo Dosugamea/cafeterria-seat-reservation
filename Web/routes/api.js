@@ -26,26 +26,29 @@ require('date-utils');
 
 // 予約の受付
 router.post('/user/reserve', function(req,res){
+	//ログイン要求
 	if(req.user){
 		let userId = req.user;
 		let seatHour = req.body.seatHour;
 		let seatMinute = req.body.seatMinute;
+		// 既に予約が存在するか確認
 		connection.query("SELECT * FROM reserves WHERE userId=? AND qrStatus=0",
 			[userId],
 			function(err,data){
 				if (err){
+					console.log();
 					res.json({
 						status:"ng",
 						reason:"database error"
 					});
+					return;
 				}
 				if (data.length > 0){
-					res.json({
-						status:"ng",
-						reason:"already exists"
-					});
+					res.redirect('/user/reserve/code');
+					return;
 				}
-				connection.query("INSERT INTO reserves (userId, seatId, reserveHour, reserveMinute) VALUES (?,-1,?,?)",
+				//無ければ追加
+				connection.query("INSERT INTO reserves (userId, reserveHour, reserveMinute) VALUES (?,?,?)",
 					[userId, seatHour, seatMinute],
 					function(err,data){
 						if (err){
@@ -53,8 +56,52 @@ router.post('/user/reserve', function(req,res){
 								status:"ng",
 								reason:"database error"
 							});
+							return;
 						}
 						res.redirect('/user/reserve/code');
+						return;
+					}
+				);
+			}
+		);
+	}else{
+		res.redirect('/sign_in');
+	}
+});
+
+// 予約のキャンセル
+router.post('/user/reserve_cancel', function(req,res){
+	//ログイン要求
+	if(req.user){
+		let userId = req.user;
+		let reserveId = req.body.reserveId;
+		// 既に予約が存在するか確認
+		connection.query("SELECT * FROM reserves WHERE userId=? AND reserveId=?",
+			[userId,reserveId],
+			function(err,data){
+				if (err){
+					res.json({
+						status:"ng",
+						reason:"database error"
+					});
+				}
+				if (data.length == 0){
+					res.json({
+						status:"ng",
+						reason:"not exist"
+					});
+				}
+				//あれば削除
+				connection.query("DELETE FROM reserves WHERE userId=? AND reserveId=?",
+					[userId, reserveId],
+					function(err,data){
+						if (err){
+							res.json({
+								status:"ng",
+								reason:"database error"
+							});
+						}
+						res.redirect('/user');
 					}
 				);
 			}
