@@ -84,12 +84,14 @@ router.post('/user/reserve_cancel', function(req,res){
 						status:"ng",
 						reason:"database error"
 					});
+					return;
 				}
 				if (data.length == 0){
 					res.json({
 						status:"ng",
 						reason:"not exist"
 					});
+					return;
 				}
 				//あれば削除
 				connection.query("DELETE FROM reserves WHERE userId=? AND reserveId=?",
@@ -167,54 +169,82 @@ router.post('/user/wait_qr', function(req,res){
 router.post('/admin/verify_reserve', function(req,res){
 	let userId = req.body.userId;
 	let reserveId = req.body.reserveId;
+	let seatId = null;
 	console.log(userId);
 	console.log(reserveId);
-	// 予約データ取得
-	connection.query("SELECT status,DATE_FORMAT(fromTime, '%Y-%m-%dT%TZ') AS fTime ,TIME_FORMAT(toTime, '%Y-%m-%dT%TZ') AS tTime FROM reserves WHERE userId=? AND reserveId=?",[userId,reserveId], function(err,data){
-		// 取得できたら
-		if (data.length > 0){
-			//今の時間
-			let nowTime = new Date();
-			let fTime = new Date(data[0].fTime);
-			let diffTime = Math.abs(nowTime-fTime);
-			let diffMins = Math.round(((diffTime % 86400000) % 3600000) / 60000);
-			console.log(diffMins);
-			let status_value = "";
-			let reason_value = "";
-			//時間を過ぎている
-			if (diffMins < -60){
-				status_value = "ng";
-				reason_value = "the reserve is time out.";
-			//まだ時間じゃない
-			}else if (diffMins > 3){
-				status_value = "ng";
-				reason_value = "the reserve is not in time.";
-			// 状態問題なし
-			}else if (data[0].status == 0){
-				status_value = "ok";
-				reason_value = "no problem";
-				connection.query("UPDATE `reserves` SET `status`=1 WHERE `userId`=? AND `reserveId`=?;",[userId,reserveId], function(err, data) {});
-			//予約が使用済みならエラー
-			}else if (data[0].status == 1){
-				status_value = "ng";
-				reason_value = "the reserve is already used";
-			//管理者による強制無効化
-			}else if (data[0].status == -1){
-				status_value = "ng";
-				reason_value = "the reserve is disabled by admin";
-			}
-			//返事を返す
-			res.json({
-				status:　status_value,
-				reason: reason_value
+	
+	// 利用時間を過ぎている席は空席にする
+	connection.query("UPDATE seats SET reserveStat = '0' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=1;",[], function(upderr,updresp){
+		// 利用時間を過ぎていて次の人が居る場合は開始時刻を弄る
+		connection.query("UPDATE seats SET reserveStat = '1' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=2;",[], function(upderr2,updresp2){
+			// 予約データ取得
+			connection.query("SELECT * FROM reserves WHERE reserveId=? AND userId=?",[userId,reserveId], function(err,data){
+				// 取得できたら
+				if (data.length > 0){
+					// 利用を開始するときの場合
+					if (data[0].qrStatus == 0 || data[0].qrStatus == 3){
+						// 空いてる席があるならまずそれを取得
+						connection.query("SELECT seatID,reservedMinute FROM seats WHERE reserveStat=0 AND accept"+data[0].reserveMinute+"Minutes=1 ORDER BY RAND() LIMIT 1",[],function(getEmptySeatErr,getEmptySeatResp){
+							if (resp3.length < 1){
+								// 空いてる席がないなら次に座れる席を取得
+								connection.query("SELECT seatID, reservedMinute, (reservedMinute*60 -(ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt)))) as diffSeconds FROM (SELECT seatID, reservedMinute, startedAt FROM seats WHERE accept"+data[0].reserveMinute+"Minutes=1 AND reserveStat=1) AS acceptableSeats ORDER BY diffSeconds DESC LIMIT 1",[], function(getNextEmptySeatErr, getNextEmptySeatResp){
+									if (getNextEmptySeatResp.length < 1){
+										// どうあがいても席はない(次予約を含め席が埋まっている)
+										res.json({
+											status:"ng"
+										});
+										return;
+									}else{
+										// 次に空く席を確保
+										let target = getNextEmptySeatResp[0].seatID;
+										connection.query("UPDATE seats SET reserveStat='2' reserveID=? reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(updateReserveStatErr,updateReserveStatResp){
+											connection.query("UPDATE reserves SET qrStatus='3' WHERE reserveID=?;",[reserveId], function(updateReserveStatErr,updateReserveStatResp){
+												res.json({
+													status:"wait",
+												});
+											});
+										});
+										return;
+									}
+								});
+							}else{
+								//空いてる席があったならそこを確保
+								let target = getEmptySeatResp[0].seatID
+								connection.query("UPDATE seats SET reserveStat='1' reserveID=? reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(err5,resp4){
+									res.json({
+										status:"ok",
+										timeMinutes: getEmptySeatResp[0].reservedMinute
+									});
+									return;
+								});
+							}
+						});
+					// 席の利用を終わるとき
+					}else if (data[0].qrStatus == 1){
+						connection.query("UPDATE seats SET reserveStat='0' WHERE seatID=?;",[reserveId], function(err6,resp5){
+							res.json({
+								status:"ok"
+							});
+							return;
+						});
+					// 異常パラメータ
+					}else{
+						res.json({
+							status:"ng",
+							reason:"the reserve is invalid"
+						});
+						return;
+					}
+				// 取得できなければ
+				}else{
+					res.json({
+						status:"ng",
+						reason:"the reserve is invalid"
+					});
+					return;
+				}
 			});
-		// 取得できなければ
-		}else{
-			res.json({
-				status:"ng",
-				reason:"the reserve is invalid"
-			});
-		}
+		});
 	});
 });
 
