@@ -17,6 +17,7 @@ static int SEAT_COUNT = 5;
  *  　参考
  *   　https://www.denshi.club/cookbook/output/led/7seg/7led74-tm1637.html
  */
+int queueTimeCounts[] = {300, 900, 300, 0, 0};
 int timeCounts[] = {300, 900, 300, 0, 0};
 TM1637Display displays[5] = {
   TM1637Display(A16,A17),
@@ -44,7 +45,7 @@ int getDisplayNumber(int displayId){
  *  http://marchan.e5.valueserver.jp/cabin/comp/jbox/arc212/doc21202.html
  * 
  *  UUIDは 8桁-4桁-4桁-4桁-12桁
- *  1204(seatId)-seqId(上4)-seqId(下4)-time(4)-検証用のデータ合計*100
+ *  124(changeMode)(seatId)-seqId(上4)-seqId(下4)-time(4)-検証用のデータ合計*100
  */
 BLEScan* pBLEScan;
 int scanTime = 1;
@@ -53,6 +54,7 @@ unsigned long internalSeqId = -1;
 class SeatBeacon{
   private:
     bool validBeacon = false;
+    int changeMode = 0;
     int seatId = -1;
     unsigned long seqId = -1;
     int timeSeconds = -1;
@@ -67,6 +69,7 @@ class SeatBeacon{
               manuLen
           );
           if (hexString.substring(0, 12).equals("4c0002151204")){
+            changeMode = this-> StrToInt(hexString.substring(12, 12));
             seatId = this-> StrToInt(hexString.substring(13, 16));
             seqId = this-> StrToLong(hexString.substring(17, 24));
             timeSeconds = this-> StrToInt(hexString.substring(25, 28));
@@ -81,6 +84,7 @@ class SeatBeacon{
         }
       }
     bool isBeacon() { return validBeacon; }
+    int getMode() {return changeMode; }
     int getSeatId() { return seatId; }
     unsigned long getSeqId() { return seqId; }
     int getTimeSeconds() { return timeSeconds; }
@@ -104,13 +108,21 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       if (bacon.isBeacon()){
         int seatId = bacon.getSeatId();
         unsigned long seqId = bacon.getSeqId();
+        int changeMode = bacon.getMode();
         int timeSeconds = bacon.getTimeSeconds();
         int targetSeatId = seatId - SEAT_NO;
         if ( seqId > internalSeqId){
           internalSeqId = seqId;
         }
         if ( (targetSeatId >= (SEAT_NO-1)) && (targetSeatId < (SEAT_COUNT+SEAT_NO)) ){
-          timeCounts[targetSeatId] = timeSeconds;
+          if (changeMode == 0){
+            timeCounts[targetSeatId] = timeSeconds;
+          }else if (changeMode == 1){
+            queueTimeCounts[targetSeatId] = timeSeconds;
+          }else if (changeMode == 2){
+            timeCounts[targetSeatId] = queueTimeCounts[targetSeatId];
+            queueTimeCounts[targetSeatId] = 0;  
+          }
           Serial.printf("[TIME CHANGE REQUEST]\n");
           Serial.printf("SeatId: %d\n", seatId);
           Serial.printf("targetSeatId: %d\n", targetSeatId);
@@ -187,6 +199,11 @@ void countdownTimer(void *pvParameters){
         displays[d].showNumberDecEx(getDisplayNumber(d), 0x40, true);
         if (timeCounts[d] > 0){
           timeCounts[d] -= 1;
+        }else{
+          if (queueTimeCounts[d] > 0){
+            timeCounts[d] = queueTimeCounts[d];
+            queueTimeCounts[d] = 0;  
+          }
         }
       }
     } 
