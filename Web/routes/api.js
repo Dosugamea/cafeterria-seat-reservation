@@ -36,7 +36,6 @@ router.post('/user/reserve', function(req,res){
 			[userId],
 			function(err,data){
 				if (err){
-					console.log();
 					res.json({
 						status:"ng",
 						reason:"database error"
@@ -117,50 +116,22 @@ router.post('/user/reserve_cancel', function(req,res){
 router.post('/user/wait_qr', function(req,res){
 	let userId = req.body.userId;
 	let reserveId = req.body.reserveId;
-	connection.query("SELECT 'T' FROM reserves WHERE userId=? AND reserveId=?",[userId,reserveId], function(err,data){
+	connection.query("SELECT 'T' FROM reserves WHERE userId=? AND reserveId=? AND qrStatus=3",[userId,reserveId], function(err,data){
 		if (err){
 			res.json({
 				status:"ng",
-				reason:"database error"
+				reason:"データベースエラー"
 			});
 		}
-		if (data.length > 0){
-			switch(data[0].status){
-				case 0:
-					res.json({
-						status:"ng",
-						code: "0",
-						reason:"not yet loaded"
-					});
-					break;
-				case 1:
-					res.json({
-						status:"ok",
-						code: "1",
-						reason:"start using seat ok"
-					});
-					break;
-				case 2:
-					res.json({
-						status:"ok",
-						code: "2",
-						reason:"end using seat ok"
-					});
-					break;
-				case 3:
-					res.json({
-						status:"ng",
-						code: "3",
-						reason:"already used."
-					});
-					break;
-				default:
-					res.json({
-						status:"ng",
-						code: "9",
-						reason:"unknown response"
-					});
-			}
+		if (data.length == 0){
+			connection.query("SELECT 'T' FROM seats WHERE userId=? AND reserveId=? AND qrStatus=3",[userId,reserveId], function(err,data){
+			
+			});
+		}else{
+			res.json({
+				status: "ng",
+				reason: "座席がご用意できませんでした..."
+			});
 		}
 	});
 });
@@ -195,12 +166,14 @@ router.post('/admin/verify_reserve', function(req,res){
 										});
 										return;
 									}else{
-										// 次に空く席を確保
+										// 次に空く席を確保(既に処理してあるからreservedMinuteを書き換えても無問題)
 										let target = getNextEmptySeatResp[0].seatID;
-										connection.query("UPDATE seats SET reserveStat='2' reserveID=? reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(updateReserveStatErr,updateReserveStatResp){
+										connection.query("UPDATE seats SET reserveStat='2', reserveID=?, reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(updateReserveStatErr,updateReserveStatResp){
 											connection.query("UPDATE reserves SET qrStatus='3' WHERE reserveID=?;",[reserveId], function(updateReserveStatErr,updateReserveStatResp){
 												res.json({
 													status:"wait",
+													seatID: target,
+													timeMinutes: data[0].reserveMinute
 												});
 											});
 										});
@@ -210,10 +183,11 @@ router.post('/admin/verify_reserve', function(req,res){
 							}else{
 								//空いてる席があったならそこを確保
 								let target = getEmptySeatResp[0].seatID
-								connection.query("UPDATE seats SET reserveStat='1' reserveID=? reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(err5,resp4){
+								connection.query("UPDATE seats SET reserveStat='1', reserveID=?, oldReserveID=?, reservedMinute=? WHERE seatID=?;",[reserveId, reserveId, data[0].reserveMinute, target], function(err5,resp4){
 									res.json({
 										status:"ok",
-										timeMinutes: getEmptySeatResp[0].reservedMinute
+										seatID: target,
+										timeMinutes: data[0].reserveMinute
 									});
 									return;
 								});
@@ -221,9 +195,9 @@ router.post('/admin/verify_reserve', function(req,res){
 						});
 					// 席の利用を終わるとき
 					}else if (data[0].qrStatus == 1){
-						connection.query("UPDATE seats SET reserveStat='0' WHERE seatID=?;",[reserveId], function(err6,resp5){
+						connection.query("UPDATE seats SET reserveStat=reserveStat-1 WHERE oldReserveID=?", [reserveId], function(upderr2, upderr2){
 							res.json({
-								status:"ok"
+								status:"end"
 							});
 							return;
 						});
