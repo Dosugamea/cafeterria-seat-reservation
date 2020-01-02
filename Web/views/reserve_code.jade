@@ -1,6 +1,7 @@
 extends layout
 
 block content
+  script(src="../../scripts/notify.js")
   div.row.mt-3
     div.col
       div.card
@@ -16,8 +17,9 @@ block content
               div.col-6.text-center
                 h3
                   b 予約ID:
-                  p= reserve_id
+                  p(id="reserveID")= reserve_id
             h2.text-center(style="color:#FF0000;") 席に座る前に端末でこのコードをかざしてください
             div.row
               img(src=reserve_qr,style="min-width:60%; height:auto;").img-fluid.mx-auto
+  include notify.html
   div.mb-3

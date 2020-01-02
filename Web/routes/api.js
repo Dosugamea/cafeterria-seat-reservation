@@ -1,5 +1,5 @@
 let express = require('express');
-let router = express.Router();
+const router = require('express-promise-router')();
 let passport = require('passport');
 let mysql = require('mysql2');
 let connection = mysql.createConnection({
@@ -28,12 +28,12 @@ require('date-utils');
 router.post('/user/reserve', function(req,res){
 	//ログイン要求
 	if(req.user){
-		let userId = req.user;
+		let userID = req.user;
 		let seatHour = req.body.seatHour;
 		let seatMinute = req.body.seatMinute;
 		// 既に予約が存在するか確認
-		connection.query("SELECT * FROM reserves WHERE userId=? AND qrStatus=0",
-			[userId],
+		connection.query("SELECT * FROM reserves WHERE userID=? AND qrStatus=0",
+			[userID],
 			function(err,data){
 				if (err){
 					res.json({
@@ -47,8 +47,8 @@ router.post('/user/reserve', function(req,res){
 					return;
 				}
 				//無ければ追加
-				connection.query("INSERT INTO reserves (userId, reserveHour, reserveMinute) VALUES (?,?,?)",
-					[userId, seatHour, seatMinute],
+				connection.query("INSERT INTO reserves (userID, reserveHour, reserveMinute) VALUES (?,?,?)",
+					[userID, seatHour, seatMinute],
 					function(err,data){
 						if (err){
 							res.json({
@@ -72,11 +72,11 @@ router.post('/user/reserve', function(req,res){
 router.post('/user/reserve_cancel', function(req,res){
 	//ログイン要求
 	if(req.user){
-		let userId = req.user;
-		let reserveId = req.body.reserveId;
+		let userID = req.user;
+		let reserveID = req.body.reserveID;
 		// 既に予約が存在するか確認
-		connection.query("SELECT * FROM reserves WHERE userId=? AND reserveId=?",
-			[userId,reserveId],
+		connection.query("SELECT * FROM reserves WHERE userID=? AND reserveID=?",
+			[userID,reserveID],
 			function(err,data){
 				if (err){
 					res.json({
@@ -93,8 +93,8 @@ router.post('/user/reserve_cancel', function(req,res){
 					return;
 				}
 				//あれば削除
-				connection.query("DELETE FROM reserves WHERE userId=? AND reserveId=?",
-					[userId, reserveId],
+				connection.query("DELETE FROM reserves WHERE userID=? AND reserveID=?",
+					[userID, reserveID],
 					function(err,data){
 						if (err){
 							res.json({
@@ -114,112 +114,302 @@ router.post('/user/reserve_cancel', function(req,res){
 
 // 予約のQR読み込み待ち(一定秒数毎に1回たたく)
 router.post('/user/wait_qr', function(req,res){
-	let userId = req.body.userId;
-	let reserveId = req.body.reserveId;
-	connection.query("SELECT 'T' FROM reserves WHERE userId=? AND reserveId=? AND qrStatus=3",[userId,reserveId], function(err,data){
+	let reserveID = req.body.reserveID;
+	console.log(reserveID);
+	connection.query("SELECT message FROM reserves WHERE reserveID=?",[reserveID], function(err,data){
 		if (err){
 			res.json({
-				status:"ng",
-				reason:"データベースエラー"
+				message:"データベースエラーです"
 			});
-		}
-		if (data.length == 0){
-			connection.query("SELECT 'T' FROM seats WHERE userId=? AND reserveId=? AND qrStatus=3",[userId,reserveId], function(err,data){
-			
-			});
+			return;
 		}else{
-			res.json({
-				status: "ng",
-				reason: "座席がご用意できませんでした..."
-			});
+			if (data.length > 0){
+				connection.query("UPDATE reserves SET message = 'None' WHERE reserveID=?",[reserveID], function(err2,data2){
+					if(err2){
+						console.log(err2);
+						return;
+					}else{
+						res.json({
+							message: data[0].message
+						});
+						return;
+					}
+				});
+			}else{
+				res.json({
+					message:"不正な予約番号です"
+				});
+				return;
+			}
 		}
 	});
 });
 
-// 予約の検証(QRコード読み取り端末から受付)
-router.post('/admin/verify_reserve', function(req,res){
-	let userId = req.body.userId;
-	let reserveId = req.body.reserveId;
-	let seatId = null;
-	console.log(userId);
-	console.log(reserveId);
-	
-	// 利用時間を過ぎている席は空席にする
-	connection.query("UPDATE seats SET reserveStat = '0' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=1;",[], function(upderr,updresp){
-		// 利用時間を過ぎていて次の人が居る場合は開始時刻を弄る
-		connection.query("UPDATE seats SET reserveStat = '1' WHERE reservedMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat=2;",[], function(upderr2,updresp2){
-			// 予約データ取得
-			connection.query("SELECT * FROM reserves WHERE reserveId=? AND userId=?",[userId,reserveId], function(err,data){
-				// 取得できたら
-				if (data.length > 0){
-					// 利用を開始するときの場合
-					if (data[0].qrStatus == 0 || data[0].qrStatus == 3){
-						// 空いてる席があるならまずそれを取得
-						connection.query("SELECT seatID,reservedMinute FROM seats WHERE reserveStat=0 AND accept"+data[0].reserveMinute+"Minutes=1 ORDER BY RAND() LIMIT 1",[],function(getEmptySeatErr,getEmptySeatResp){
-							if (resp3.length < 1){
-								// 空いてる席がないなら次に座れる席を取得
-								connection.query("SELECT seatID, reservedMinute, (reservedMinute*60 -(ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt)))) as diffSeconds FROM (SELECT seatID, reservedMinute, startedAt FROM seats WHERE accept"+data[0].reserveMinute+"Minutes=1 AND reserveStat=1) AS acceptableSeats ORDER BY diffSeconds DESC LIMIT 1",[], function(getNextEmptySeatErr, getNextEmptySeatResp){
-									if (getNextEmptySeatResp.length < 1){
-										// どうあがいても席はない(次予約を含め席が埋まっている)
-										res.json({
-											status:"ng"
-										});
-										return;
-									}else{
-										// 次に空く席を確保(既に処理してあるからreservedMinuteを書き換えても無問題)
-										let target = getNextEmptySeatResp[0].seatID;
-										connection.query("UPDATE seats SET reserveStat='2', reserveID=?, reservedMinute=? WHERE seatID=?;",[reserveId, data[0].reserveMinute, target], function(updateReserveStatErr,updateReserveStatResp){
-											connection.query("UPDATE reserves SET qrStatus='3' WHERE reserveID=?;",[reserveId], function(updateReserveStatErr,updateReserveStatResp){
-												res.json({
-													status:"wait",
-													seatID: target,
-													timeMinutes: data[0].reserveMinute
-												});
-											});
-										});
-										return;
-									}
-								});
-							}else{
-								//空いてる席があったならそこを確保
-								let target = getEmptySeatResp[0].seatID
-								connection.query("UPDATE seats SET reserveStat='1', reserveID=?, oldReserveID=?, reservedMinute=? WHERE seatID=?;",[reserveId, reserveId, data[0].reserveMinute, target], function(err5,resp4){
-									res.json({
-										status:"ok",
-										seatID: target,
-										timeMinutes: data[0].reserveMinute
-									});
-									return;
-								});
-							}
-						});
-					// 席の利用を終わるとき
-					}else if (data[0].qrStatus == 1){
-						connection.query("UPDATE seats SET reserveStat=reserveStat-1 WHERE oldReserveID=?", [reserveId], function(upderr2, upderr2){
-							res.json({
-								status:"end"
-							});
-							return;
-						});
-					// 異常パラメータ
-					}else{
-						res.json({
-							status:"ng",
-							reason:"the reserve is invalid"
-						});
-						return;
-					}
-				// 取得できなければ
+
+// 時間切れの席のreserveStatを変更する
+function updateReserveStatOnTimeOverSeat() {
+    return new Promise((resolve) => {
+		connection.query(
+			"UPDATE seats SET reserveStat = reserveStat-1, oldReserveID=reserveID WHERE reserveMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat > 0;",
+			[],
+			function(err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
 				}else{
-					res.json({
-						status:"ng",
-						reason:"the reserve is invalid"
-					});
-					return;
+					resolve(resp[0]);
 				}
-			});
+			}
+		);
+    });
+}
+
+// 予約データ取得
+function getReservedData(userID,reserveID){
+    return new Promise((resolve) => {
+		connection.query("SELECT * FROM reserves WHERE reserveID=? AND userID=?",[userID,reserveID], function(err,resp){
+			if (err){
+				console.log(err);
+				resolve(null);
+			}else{
+				if (resp.length > 0){
+					resolve(resp[0]);
+				}else{
+					resolve(null);
+				}
+			}
 		});
+    });
+}
+
+// 空席データ取得
+function getEmptySeatData(reserveMinute){
+	return new Promise((resolve) => {
+		connection.query(
+			"SELECT seatID,reserveMinute FROM seats WHERE reserveStat=0 AND accept"+reserveMinute+"Minutes=1 ORDER BY RAND() LIMIT 1",
+			[],
+			function(err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					if (resp.length > 0){
+						resolve(resp[0]);
+					}else{
+						resolve(null);
+					}
+				}
+			}
+		);
+    });
+}
+
+// 空席にデータを配置
+function setSeatData(reserveID,reserveMinute,targetSeatID){
+	return new Promise((resolve) => {
+		connection.query(
+			"UPDATE seats SET reserveStat='1', reserveID=?, oldReserveID=?, reserveMinute=? WHERE seatID=?",
+			[reserveID, reserveID, reserveMinute, target],
+			function(err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					resolve(true);
+				}
+			}
+		);
+    });
+}
+
+// 次に空席になる場所を取得
+function getNextEmptySeatData(reserveMinute){
+	return new Promise((resolve) => {
+		connection.query(
+			"SELECT seatID, reserveMinute, (reserveMinute*60 -(ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt)))) as diffSeconds FROM (SELECT seatID, reserveMinute, startedAt FROM seats WHERE accept"+reserveMinute+"Minutes=1 AND reserveStat=1) AS acceptableSeats ORDER BY diffSeconds DESC LIMIT 1",
+			[],
+			function(err, resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					if (resp.length > 0){
+						resolve(resp[0]);
+					}else{
+						resolve(null);
+					}
+				}
+			}
+		);
+    });
+}
+
+// 次に空席になる場所にデータを配置
+function setNextSeatData(reserveID,reserveMinute,seatID){
+	return new Promise((resolve) => {
+		connection.query(
+			"UPDATE seats SET reserveStat='2', reserveID=?, reserveMinute=? WHERE seatID=?;",
+			[reserveID, reserveMinute, seatID],
+			function(err, resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					resolve(true);
+				}
+			}
+		);
+    });
+}
+
+// スマホに通知するメッセージを指定する(同時にqrStatusも更新する)
+function setReserveMessage(reserveID, message, qrStatus){
+	return new Promise((resolve) => {
+		connection.query(
+			"UPDATE reserves SET message=?,qrStatus=? WHERE reserveID=?",
+			[message, qrStatus, reserveID],
+			function (err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					resolve(true);
+				}
+			}
+		);
 	});
+}
+
+// 使用中の座席を取得
+function getUsingSeat(reserveID){
+	return new Promise((resolve) => {
+		connection.query(
+			"SELECT * FROM seats WHERE oldReserveID=?",
+			[reserveID],
+			function (err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					resolve(resp[0]);
+				}
+			}
+		);
+	});
+}
+
+// 座席を離れる
+function leaveSeat(seatID){
+	return new Promise((resolve) => {
+		connection.query(
+			"UPDATE seats SET reserveStat = reserveStat-1, oldReserveID=reserveID WHERE seatID=?",
+			[seatID],
+			function (err,resp){
+				if (err){
+					console.log(err);
+					resolve(null);
+				}else{
+					resolve(true);
+				}
+			}
+		);
+	});
+}
+
+// 予約の検証(QRコード読み取り端末から受付)
+router.post('/admin/verify_reserve', async function(req,res){
+	let userID = req.body.userID;
+	let reserveID = req.body.reserveID;
+	let seatID = null;
+	console.log(userID);
+	console.log(reserveID);
+	//時間切れの席の情報を更新
+	const updateReserveStatOnTimeOverSeatResponse = await updateReserveStatOnTimeOverSeat();
+	// 予約データ取得
+	const reservedDataResponse = await getReservedData(userID,reserveID);
+	// 存在しなければエラー
+	if (reservedDataResponse == null){
+		res.json({
+			status:"ng",
+			reason:"the reserve is invalid"
+		});
+		return;
+	}
+	// 予約していた分数を指定
+	let reserveMinute = reservedDataResponse.reserveMinute;
+	// 席の利用を始めるとき
+	if (reservedDataResponse.qrStatus == 0){
+		// 空いてる席があるか確認
+		let emptySeatResponse = await getEmptySeatData(reserveMinute);
+		if (emptySeatResponse != null){
+			// 空いている席を確保
+			let seatID = emptySeatResponse.seatID;
+			let setSeatDataResponse = await setSeatData(
+				reserveID,
+				reserveMinute,
+				seatID
+			);
+			let setReserveMessageResponse = await setReserveMessage(
+				reserveID,
+				seatID + "番の席へお進みください",
+				1
+			)
+			res.json({
+				status:"ok",
+				reserveMinute: reserveMinute,
+				seatID: seatID
+			});
+			return;
+		}else{
+			// 次に空く席があるか
+			let nextEmptySeatResponse = await getNextEmptySeatData(reserveMinute);
+			if (nextEmptySeatResponse != null){
+				// 次に空く席を確保(既に処理してあるからreserveMinuteを書き換えても無問題)
+				let seatID = nextEmptySeatResponse.seatID;
+				let setNextSeatDataResponse = await setNextSeatData(
+					reserveID,
+					reserveMinute,
+					seatID
+				);
+				let setReserveMessageResponse = await setReserveMessage(
+					reserveID,
+					seatID + "番の席へお進みください。 (約" + setNextSeatDataResponse.diffSeconds + "秒お待ち下さい)",
+					1
+				)
+				res.json({
+					status:"wait",
+					reserveMinute: reserveMinute,
+					seatID: seatID
+				});
+				return;
+			}else{
+				// どうあがいても席はない(次予約を含め席が埋まっている)
+				let setReserveMessageResponse = await setReserveMessage(
+					reserveID,
+					"申し訳ありませんが空いている席がありません、少し待ってから再度かざしてください。",
+					0
+				)
+				res.json({
+					status:"ng",
+					reason: "empty seat was not found"
+				});
+				return;
+			}
+		}
+	// 席の利用を終えるとき
+	}else{
+		let getUsingSeatResponse = await getUsingSeat(reserveID);
+		let leaveSeatResponse = await leaveSeat(getUsingSeatResponse.seatID);
+		let setReserveMessageResponse = await setReserveMessage(
+			reserveID,
+			"ご利用ありがとうございました。",
+			2
+		)
+		res.json({
+			status:"end",
+		});
+		return;
+	}
 });
 
 // アカウント登録
@@ -256,9 +446,9 @@ router.post('/user', function(req,res){
 			res.redirect('/user/edit?error=1');
 			return;
 		}
-		connection.query("SELECT passwd FROM `users` WHERE passwd=? AND userId=?",[ac_opass,req.user], function(err, data) {
+		connection.query("SELECT passwd FROM `users` WHERE passwd=? AND userID=?",[ac_opass,req.user], function(err, data) {
 			if(data.length > 0){
-				connection.query("UPDATE `users` SET `passwd`=? WHERE `userId`=?;",[ac_npass,req.user], function(err, data) {
+				connection.query("UPDATE `users` SET `passwd`=? WHERE `userID`=?;",[ac_npass,req.user], function(err, data) {
 					res.redirect('/user?status=2');
 				});
 			}else{

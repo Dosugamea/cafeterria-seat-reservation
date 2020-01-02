@@ -1,5 +1,5 @@
 var express = require('express');
-var router = express.Router();
+var router = require('express-promise-router')();
 var createError = require('http-errors');
 var QRCode = require('qrcode');
 var mysql = require('mysql2');
@@ -40,7 +40,7 @@ router.get('/index.html', function(req, res, next) {
 router.get('/user', function(req, res, next) {
 	if(req.user){
 		//予約情報取得
-		connection.query("SELECT reserveHour,reserveMinute FROM reserves WHERE userId=? and status=0",　[req.user], function(err,data) {
+		connection.query("SELECT reserveHour,reserveMinute FROM reserves WHERE userID=? and status=0",　[req.user], function(err,data) {
 			var reserve_date = "予約は";
 			var reserve_time = "入っていません";
 			//予約されていれば予約日枠を用意
@@ -51,7 +51,7 @@ router.get('/user', function(req, res, next) {
 				reserve_date = (today.getMonth()+1)+"/"+today.getDate();
 				reserve_time = data[0].reserveHour+"時台 "+data[0].reserveMinute+"分間";
 			}
-			connection.query("SELECT COUNT(reserveId) AS orderCount FROM reserves WHERE userId=?",　[req.user], function(err,data) {
+			connection.query("SELECT COUNT(reserveID) AS orderCount FROM reserves WHERE userID=?",　[req.user], function(err,data) {
 				res.render('user', {
 					login_ok: req.user,
 					reservedDate: reserve_date,
@@ -84,12 +84,12 @@ router.get('/user/reserve', function(req, res, next) {
 router.get('/user/reserve/code', function(req, res, next) {
 	if(req.user){
 		//予約情報取得
-		connection.query("SELECT * from reserves WHERE userId=? AND status=0",　[req.user], function(err,data) {
+		connection.query("SELECT * from reserves WHERE userID=? AND status=0 AND qrStatus < 2",　[req.user], function(err,data) {
 			//予約されていればQRコードを生成
 			if (data.length > 0){
-				QRCode.toDataURL(req.user+'_'+data[0].reserveId, function (err, url) {
+				QRCode.toDataURL(req.user+'_'+data[0].reserveID, function (err, url) {
 					var reserve_qr = url;
-					var reserve_id = data[0].reserveId;
+					var reserve_id = data[0].reserveID;
 					res.render('reserve_code', {
 						login_ok: req.user,
 						reserve_qr: reserve_qr,
