@@ -1,8 +1,8 @@
-let express = require('express');
+const express = require('express');
 const router = require('express-promise-router')();
-let passport = require('passport');
-let mysql = require('mysql2');
-let connection = mysql.createConnection({
+const passport = require('passport');
+const mysql = require('mysql2');
+const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
@@ -150,14 +150,40 @@ router.post('/user/wait_qr', function(req,res){
 function updateReserveStatOnTimeOverSeat() {
     return new Promise((resolve) => {
 		connection.query(
-			"UPDATE seats SET reserveStat = reserveStat-1, oldReserveID=reserveID WHERE reserveMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat > 0;",
+			"SELECT * FROM seats WHERE reserveMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat > 0;",
 			[],
-			function(err,resp){
-				if (err){
-					console.log(err);
+			function(err1,resp1){
+				if (err1){
+					console.log(err1);
 					resolve(null);
 				}else{
-					resolve(resp[0]);
+					for (let forceLeave of resp1){
+						console.log("forceLeaveing");
+						let reserveID = forceLeave.oldReserveID;
+						connection.query(
+							"UPDATE reserves SET qrStatus=2 WHERE reserveID=?",
+							[reserveID],
+							function(err2,resp2){
+								if (err2){
+									console.log(err);
+									resolve(null);
+								}
+							}
+						);
+					}
+					console.log("UPDATE");
+					connection.query(
+						"UPDATE seats SET reserveStat = reserveStat-1, oldReserveID=reserveID WHERE reserveMinute*60 - ( ABS(TIMESTAMPDIFF(MINUTE,CURRENT_TIMESTAMP(),startedAt)) * 60 + ABS(TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),startedAt))) < 0 AND reserveStat > 0;",
+						[],
+						function(err3,resp3){
+							if (err3){
+								console.log(err3);
+								resolve(null);
+							}else{
+								resolve(true);
+							}
+						}
+					);
 				}
 			}
 		);
@@ -167,9 +193,8 @@ function updateReserveStatOnTimeOverSeat() {
 // 予約データ取得
 function getReservedData(userID,reserveID){
     return new Promise((resolve) => {
-		connection.query("SELECT * FROM reserves WHERE reserveID=? AND userID=?",[userID,reserveID], function(err,resp){
+		connection.query("SELECT * FROM reserves WHERE userID=? AND reserveID=?",[userID,reserveID], function(err,resp){
 			if (err){
-				console.log(err);
 				resolve(null);
 			}else{
 				if (resp.length > 0){
@@ -208,8 +233,8 @@ function getEmptySeatData(reserveMinute){
 function setSeatData(reserveID,reserveMinute,targetSeatID){
 	return new Promise((resolve) => {
 		connection.query(
-			"UPDATE seats SET reserveStat='1', reserveID=?, oldReserveID=?, reserveMinute=? WHERE seatID=?",
-			[reserveID, reserveID, reserveMinute, target],
+			"UPDATE seats SET reserveStat=1, reserveID=?, oldReserveID=?, reserveMinute=?, startedAt=CURRENT_TIMESTAMP() WHERE seatID=?",
+			[reserveID, reserveID, reserveMinute, targetSeatID],
 			function(err,resp){
 				if (err){
 					console.log(err);
@@ -245,10 +270,10 @@ function getNextEmptySeatData(reserveMinute){
 }
 
 // 次に空席になる場所にデータを配置
-function setNextSeatData(reserveID,reserveMinute,seatID){
+function setNextSeatData(reserveID, reserveMinute, seatID){
 	return new Promise((resolve) => {
 		connection.query(
-			"UPDATE seats SET reserveStat='2', reserveID=?, reserveMinute=? WHERE seatID=?;",
+			"UPDATE seats SET reserveStat=2, reserveID=?, reserveMinute=? WHERE seatID=?",
 			[reserveID, reserveMinute, seatID],
 			function(err, resp){
 				if (err){
@@ -373,7 +398,7 @@ router.post('/admin/verify_reserve', async function(req,res){
 				);
 				let setReserveMessageResponse = await setReserveMessage(
 					reserveID,
-					seatID + "番の席へお進みください。 (約" + setNextSeatDataResponse.diffSeconds + "秒お待ち下さい)",
+					seatID + "番の席へお進みください。 (約" + nextEmptySeatResponse.diffSeconds + "秒お待ち下さい)",
 					1
 				)
 				res.json({
@@ -399,7 +424,9 @@ router.post('/admin/verify_reserve', async function(req,res){
 	// 席の利用を終えるとき
 	}else{
 		let getUsingSeatResponse = await getUsingSeat(reserveID);
-		let leaveSeatResponse = await leaveSeat(getUsingSeatResponse.seatID);
+		if (getUsingSeatResponse.reserveStat > 0){
+			let leaveSeatResponse = await leaveSeat(getUsingSeatResponse.seatID);
+		}
 		let setReserveMessageResponse = await setReserveMessage(
 			reserveID,
 			"ご利用ありがとうございました。",
@@ -407,6 +434,8 @@ router.post('/admin/verify_reserve', async function(req,res){
 		)
 		res.json({
 			status:"end",
+			reserveMinute: 0,
+			seatID: getUsingSeatResponse.seatID
 		});
 		return;
 	}

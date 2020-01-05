@@ -1,9 +1,12 @@
 import requests
 import json
+from time import sleep
 
 ENDPOINT = "http://localhost:3000/admin/verify_reserve"
 PARAMS ={
-    "userId":"7",
-    "reserveId":"1"
+    "userID":"1",
+    "reserveID":"14"
 }
-print(requests.post(ENDPOINT,data=PARAMS).text)
+resp = requests.post(ENDPOINT,data=PARAMS)
+print(resp.status_code)
+print(resp.text)

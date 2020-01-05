@@ -5,20 +5,20 @@ block content
     .col
       .card
         .card-body
-          h4 予約画面
-          p LA TERRAの席の予約を行えます
+          h4 席取り予約画面
+          p LA TERRAの席取りの予約を行えます
           form(method="post",action="/user/reserve").mt-5
             .form-group
-              label(for="seatType") 席の種別
+              label(for="seatType") 席を利用したい時間
               select.form-control(name="seatMinute")
-                option(value=0,selected,disabled) 席の種別を選択してください
-                option(value=30) 30分席
-                option(value=20) 20分席
-                option(value=15) 15分席
+                option(value=0,selected,disabled) 自分が必要な時間以上を選んでください
+                option(value=30) 30分
+                option(value=20) 20分
+                option(value=15) 15分
             .form-group
               label(for="seatType") 時間帯
               select.form-control(name="seatHour")
-                option(value=0,selected,disabled) 時間帯を選択してください
+                option(value=0,selected,disabled) 席を利用する時間帯を選択してください
                 option(value=11) 11:00~12:00
                 option(value=12) 12:00~13:00
                 option(value=13) 13:00~14:00

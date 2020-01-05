@@ -1,9 +1,9 @@
-var express = require('express');
-var router = require('express-promise-router')();
-var createError = require('http-errors');
-var QRCode = require('qrcode');
-var mysql = require('mysql2');
-var connection = mysql.createConnection({
+const express = require('express');
+const router = require('express-promise-router')();
+const createError = require('http-errors');
+const QRCode = require('qrcode');
+const mysql = require('mysql2');
+const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
@@ -40,11 +40,12 @@ router.get('/index.html', function(req, res, next) {
 router.get('/user', function(req, res, next) {
 	if(req.user){
 		//予約情報取得
-		connection.query("SELECT reserveHour,reserveMinute FROM reserves WHERE userID=? and status=0",　[req.user], function(err,data) {
+		connection.query("SELECT reserveHour,reserveMinute FROM reserves WHERE userID=? and qrStatus=0",　[req.user], function(err,data) {
 			var reserve_date = "予約は";
 			var reserve_time = "入っていません";
+			console.log(data)
 			//予約されていれば予約日枠を用意
-			if (data != undefined){
+			if (data.length > 0){
 				//予約規制情報を取得する
 				//予約規制されてなければ普通にデータを
 				var today = new Date();
