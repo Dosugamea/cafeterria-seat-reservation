@@ -5,7 +5,7 @@ function readQrResponse(){
 	var reserveID = document.getElementById('reserveID').textContent;
 	var xhr = new XMLHttpRequest();
 	var urlEncodedData = "reserveID=" + reserveID;
-	xhr.open('POST', "http://192.168.1.12:3000/user/wait_qr");
+	xhr.open('POST', "http://192.168.43.197:3000/user/wait_qr");
 	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 	xhr.send(urlEncodedData);
 	xhr.onreadystatechange = function() {

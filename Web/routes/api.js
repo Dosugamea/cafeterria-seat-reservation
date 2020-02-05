@@ -38,7 +38,7 @@ router.post('/user/reserve', function(req,res){
 				if (err){
 					res.json({
 						status:"ng",
-						reason:"database error"
+						reason:"database select error"
 					});
 					return;
 				}
@@ -53,7 +53,8 @@ router.post('/user/reserve', function(req,res){
 						if (err){
 							res.json({
 								status:"ng",
-								reason:"database error"
+								code: err,
+								reason:"database insert error"
 							});
 							return;
 						}
